@@ -1,0 +1,42 @@
+import os
+import requests
+import time
+
+os.makedirs("images", exist_ok=True)
+
+tags = "cat_ears 1girl chibi solo"
+base_url = f"https://safebooru.org/index.php?page=dapi&s=post&q=index&tags={tags.replace(' ','+')}&limit=100"
+
+for page in range(1, 11):   # \~800-1000 images
+    url = f"{base_url}&pid={page}"
+    print(f"Page {page} fetching...")
+    
+    resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
+    if resp.status_code != 200:
+        print("Blocked", resp.status_code)
+        break
+    
+    # XML parse simple way
+    from xml.etree import ElementTree as ET
+    root = ET.fromstring(resp.content)
+    posts = root.findall('post')
+    
+    if not posts:
+        break
+        
+    for post in posts:
+        img_url = post.get('file_url')
+        if not img_url:
+            continue
+        filename = f"{post.get('id')}.jpg"
+        try:
+            data = requests.get(img_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10).content
+            with open(f"images/{filename}", "wb") as f:
+                f.write(data)
+            print(f"✅ {filename}")
+            time.sleep(0.8)
+        except:
+            pass
+
+print("Download done! Ab push kar:")
+os.system('git add . && git commit -m "Bulk safebooru anime images added" && git push --force')
